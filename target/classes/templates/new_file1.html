@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en"  xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>调用高德API实现定位导航</title>
+    <style type="text/css">
+        html,
+        body,
+        #container {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <style type="text/css">
+        #panel {
+            position: fixed;
+            background-color: white;
+            max-height: 90%;
+            overflow-y: auto;
+            top: 10px;
+            right: 10px;
+            width: 280px;
+        }
+        #panel .amap-call {
+            background-color: #009cf9;
+            border-top-left-radius: 4px;
+            border-top-right-r:0 ;adius: 4px;
+        }
+        #panel .amap-lib-driving {
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+            overflow: hidden;
+        }
+    </style>
+    <script>
+
+        /*
+            方便简单， 但是要考虑浏览器的版本支持
+        */
+    </script>
+    <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css" />
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.5.1.min.js"></script>
+    <script src="https://a.amap.com/jsapi_demos/static/demo-center/js/demoutils.js"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=8cc355b1d46538c64a75d9a0b57ea744&plugin=AMap.Driving"></script>
+    <script type="text/javascript" src="https://cache.amap.com/lbs/static/addToolbar.js"></script>
+</head>
+<body>
+名字：<input type="text" id="name"/>
+<input type="button"  onclick="click1()" value="获取地图："/>
+<form>
+    <h1 class="shuchu" style="font-size: 25px;  color: red">输入您要去的地方！</h1>
+</form>
+<div class="map-container" id="container1"></div>
+<div id="container"></div>
+<div id="panel"></div>
+<p id='info'></p>
+<h4 id='status'></h4>
+<p id='result'></p>
+<script th:inline="javascript">
+    //基本地图加载
+    function click2(){
+        alert(1)
+    }
+    var destination;
+    function click1(){
+
+        // document.getElementById("name").value = localStorage.getItem("name");
+        // destination=localStorage.getItem("name");
+        destination=[[${located}]] //'[[${loacted}]]';
+        //var lab=document.getElementById("lab")
+        var m,n;//用来获得定位点坐标
+        m=[[${lat}]];//localStorage.getItem("lat");
+        n=[[${log}]];//localStorage.getItem("lon");
+        var map = new AMap.Map("container", {
+            resizeEnable: true,
+            zoom: 13 //地图显示的缩放级别
+        });
+
+        AMap.plugin('AMap.Geolocation', function() {
+            var geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true,//是否使用高精度定位，默认:true
+                timeout: 10000,          //超过10秒后停止定位，默认：5s
+                buttonPosition:'RB',    //定位按钮的停靠位置
+                buttonOffset: new AMap.Pixel(10, 20),//定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
+                zoomToAccuracy: true,   //定位成功后是否自动调整地图视野到定位点
+
+            });
+            map.addControl(geolocation);
+            geolocation.getCurrentPosition(function(status,result){
+                if(status=='complete'){
+                    onComplete(result)
+                }else{
+                    onError(result)
+                }
+            });
+        });
+        //构造路线导航类
+        var driving = new AMap.Driving({
+            map: map,
+            panel: "panel"
+        });
+        // 根据起终点经纬度规划驾车导航路线
+
+        //解析定位结果
+        function onComplete(data) {
+            var str = [];
+            // m=data.position.getLng();
+            //n=data.position.getLat();//获得坐标并实施导航
+            AMap.plugin('AMap.Geocoder', function() {
+                var geocoder = new AMap.Geocoder();
+                geocoder.getLocation(destination, function(status, result) {
+                    if (status === 'complete' && result.info === 'OK') {
+                        // 经纬度
+                        var lng = result.geocodes[0].location.lng;
+                        var lat = result.geocodes[0].location.lat;
+
+                        driving.search(new AMap.LngLat(m, n), new AMap.LngLat(lng, lat), function(status, result) {
+                            // result 即是对应的驾车导航信息，相关数据结构文档请参考  https://lbs.amap.com/api/javascript-api/reference/route-search#m_DrivingResult
+                            if (status === 'complete') {
+                                log.success('绘制驾车路线完成')
+                            } else {
+                                log.error('获取驾车数据失败：' + result)
+                            }
+                        });
+                        //alert(m);
+                    } else {
+                        console.log('定位失败！');
+                    }
+                }); //geocoder.getLocation
+            });
+
+            if(data.accuracy){
+                str.push('精度：' + data.accuracy + ' 米');
+            }//如为IP精确定位结果则没有精度信息
+            //document.getElementById('result').innerHTML = str.join('<br>');
+            alert(lng)
+        }
+        //解析定位错误信息
+        function onError(data) {
+            document.getElementById('status').innerHTML='定位失败'
+            document.getElementById('result').innerHTML = '失败原因排查信息:'+data.message;
+        }
+
+        alter(lng)
+        showCityInfo();
+    }
+</script>
+</body>
+</html>
